@@ -1,0 +1,3 @@
+# Keep upstream library and generated shader whitespace verbatim.
+vendor/** -whitespace
+*.html -whitespace

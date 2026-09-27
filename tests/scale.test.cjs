@@ -1,0 +1,6 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const S=require('../game/scale'),P=require('../game/pet'),{limits}=require('../game/rules');
+function frame(w,h){const size=192,rgba=new Uint8Array(size*size*4);for(let y=96-h/2;y<96+h/2;y++)for(let x=96-w/2;x<96+w/2;x++)rgba.set([90,140,80,255],(y*size+x)*4);return{size,rgba};}
+test('uniform size changes real hit pixels, original data is untouched and restoring is exact',()=>{const a=frame(100,120),b=frame(120,100),copy=a.rgba.slice();const small=[a,b].map(f=>S.resize(f,85));assert(small[0].rgba.filter((v,i)=>i%4===3&&v).length<12000);assert.deepEqual(a.rgba,copy);assert.deepEqual(S.resize(a,100).rgba,copy);assert.deepEqual(P.inspectGroup(small,limits).map(s=>s.area),[8670,8670]);});
+test('allowed sizes are intersection of actual per-pose limits, never accepting too small',()=>{const frames=[frame(80,80),frame(90,80)],choices=S.choices(frames,limits);assert(choices.length);assert(choices[0]>75);for(const n of choices)P.inspectGroup(frames.map(f=>S.resize(f,n)),limits);assert.throws(()=>P.inspectGroup(frames.map(f=>S.resize(f,75)),limits),/area_small/);});
+test('bad multipliers and invalid silhouettes have no legal selection',()=>{for(const p of [0,74,101,NaN,85.5])assert.throws(()=>S.resize(frame(100,120),p),/invalid_scale/);assert.deepEqual(S.choices([frame(4,4)],limits),[]);});

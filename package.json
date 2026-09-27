@@ -1,0 +1,46 @@
+{
+  "name": "pet-hide-duel",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:core && npm run test:network && npm run test:service && npm run test:host-sdk",
+    "test:geometry": "node --test tests/geometry.test.cjs",
+    "test:core": "npm run test:geometry && npm run test:pet && npm run test:match && npm run test:scale && npm run test:feedback && npm run test:sessions && npm run test:pose-lock && npm run test:doll-pose && npm run test:motion",
+    "test:pet": "node --test tests/pet.test.cjs",
+    "test:match": "node --test tests/match.test.cjs",
+    "test:network": "node --test tests/network.test.cjs",
+    "test:host-foundation-e2e": "node tests/host-foundation-e2e.cjs",
+    "test:delivery": "npm run test:public && npm run test:host-foundation-e2e && npm run test:current-pets-e2e && npm run test:doll-render-e2e && npm run test:game-e2e && npm run test:sdk-flow-e2e && npm run test:e2e:smoothness && npm run test:e2e:smoothness:doll",
+    "build": "node build-game.cjs",
+    "start": "node launch-server.cjs",
+    "test:service": "node --test tests/service.test.cjs",
+    "test:game-e2e": "npm run test:pose-lock-e2e",
+    "test:current-pets-e2e": "npm run build && node tests/current-pets-e2e.cjs",
+    "test:host-sdk": "node --test tests/host-sdk.test.cjs",
+    "test:scale": "node --test tests/scale.test.cjs tests/scale-storage.test.cjs",
+    "test:feedback": "node --test tests/feedback.test.cjs",
+    "test:sessions": "node --test tests/sessions.test.cjs",
+    "test:pose-lock": "node --test tests/pose-lock.test.cjs",
+    "test:doll-pose": "node --test tests/doll-pose.test.cjs",
+    "test:pose-lock-e2e": "npm run build && node tests/pose-lock-e2e.cjs",
+    "test:doll-render-e2e": "node tests/doll-render-e2e.cjs",
+    "test:sdk-flow-e2e": "npm run build && node tests/sdk-flow-e2e.cjs",
+    "test:motion": "node --test tests/motion.test.cjs",
+    "test:e2e:smoothness": "node tests/smoothness-e2e.cjs",
+    "test:e2e:smoothness:doll": "node tests/smoothness-e2e.cjs --doll",
+    "build:check": "node build-game.cjs --check",
+    "test:public": "npm test && npm run build:check"
+  },
+  "version": "2.0.1",
+  "description": "A two-player LAN hide-and-seek duel with 2D pets and frontal 3D doll poses.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShunyuYao/pet-hide-duel.git"
+  }
+}
