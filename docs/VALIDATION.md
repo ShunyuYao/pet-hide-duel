@@ -41,3 +41,9 @@ Historical art-sample checks, pre-pose-lock game E2E, and legacy failure-reprodu
 2026-09-27: all 75 self-contained tests passed (0 failed / 0 skipped); exact HTML rebuild passed. Both real hidden-host delivery paths passed: 2D + 2D and actual 3D doll + 2D. Each verified file-byte identity, first-use pairing/consent, roles, real keyboard movement/aim, final position convergence, leaving and process cleanup. No uncaught renderer exceptions. Background screenshots were inspected locally; no private screenshots are published.
 
 2.0.1 单文件 SHA-256：`a52eed6bb1bb91937cefb7f96cee6019c8a78d030213bc8340ef0107143ffb36`，725286 字节。公开打包只增加许可注释，游戏执行内容与已修复版本逐字相同。75 项测试、2D 与 3D 真实双实例复验均通过；未捕获渲染异常为 0。
+
+## 2.0.2 release evidence / 发布复验
+
+2.0.2 单文件 SHA-256：`f0439b2ae6c8cf37d2745a14dbe52ff56633ed40227122b548a095361e2b9672`，725689 字节（`npm run build:check` 通过）。`npm test` 全部通过，新增「一条消息出错不会卡住收消息」「同一局超过 512 次操作不会卡住裁判」两项；会话测试替身改为按读取位置返回事件（与宿主一致）。两台真实宿主的对局测试（`test:game-e2e`）通过。宿主仓库的 peer-session 投递端到端在本版与未修改的 2.0.1 上都会在不同步骤偶发失败（选文件、输入框焦点、寻找可命中像素），与本次修改无关。
+
+Health-check replay (vibe_contents/net-checkup, hide reliable-exhaust, real host session code): 540 guest requests at 12/s all answered, both sides connected (2.0.1: locked from request #511).

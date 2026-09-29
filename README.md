@@ -1,6 +1,6 @@
 # 躲好了吗？ · Pet Hide Duel
 
-双人局域网躲猫猫对决，支持 2D 宠物与 3D 玩偶正面摆姿势。当前唯一维护版本为 **2.0.1**，游戏文件是 `躲猫猫对决.html`，无需 CDN。
+双人局域网躲猫猫对决，支持 2D 宠物与 3D 玩偶正面摆姿势。当前唯一维护版本为 **2.0.2**，游戏文件是 `躲猫猫对决.html`，无需 CDN。
 
 [下载游戏与局域网完整包](https://github.com/ShunyuYao/pet-hide-duel/releases/latest) · [English](README.en.md) · [验证范围](docs/VALIDATION.md)
 

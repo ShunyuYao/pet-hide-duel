@@ -1,6 +1,6 @@
 # Pet Hide Duel
 
-A two-player LAN hide-and-seek duel with 2D pets and frontal 3D doll posing. **2.0.1** is the single maintained version. The self-contained `躲猫猫对决.html` requires no CDN.
+A two-player LAN hide-and-seek duel with 2D pets and frontal 3D doll posing. **2.0.2** is the single maintained version. The self-contained `躲猫猫对决.html` requires no CDN.
 
 [Download the game and LAN bundle](https://github.com/ShunyuYao/pet-hide-duel/releases/latest) · [中文](README.md) · [Validation](docs/VALIDATION.md)
 
