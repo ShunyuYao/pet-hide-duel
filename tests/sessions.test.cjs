@@ -3,9 +3,12 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {create,encodeView,decodeView,decodePet,vector}=require('../game/sessions');
 const {Match}=require('../game/match.cjs'),R=require('../game/rules'),W=require('../game/wall'),G=require('../game/geometry');
 function pet(){const rgba=Buffer.alloc(192*192*4);for(let y=30;y<162;y++)for(let x=64;x<128;x++)rgba.set([80,160,120,255],(y*192+x)*4);return {name:'宠物',frames:[{name:'站立',pixels:rgba.toString('base64')}]};}
-function pair(){const queues=[[],[]],assets=[new Map(),new Map()],sent=[[],[]];let online=true,closed=false;
- const sdk=[0,1].map(i=>({getContext:async()=>({role:i?'guest':'host',protocol:{id:'pet-hide-duel',version:2},invitationId:'fixture',peer:{displayName:'朋友'}}),join:async()=>({status:'connected',epoch:1}),send:async m=>{if(!online)throw Error('peer_offline');sent[i].push(structuredClone(m));queues[1-i].push({type:'message',message:structuredClone(m)});return {status:m.lane==='latest'?'queued':'peer_received',seq:1};},poll:async()=>{await new Promise(r=>setTimeout(r,15));const events=queues[i].splice(0);return {events,cursor:1,transportState:closed?'closed':online?'connected':'reconnecting',epoch:1};},transfer:async a=>{const id='asset-'+i;assets[1-i].set(id,{...a,transferId:id});queues[1-i].push({type:'transfer',transferId:id,purpose:a.purpose});return {transferId:id};},readTransfer:async({transferId})=>assets[i].get(transferId),leave:async()=>{closed=true;return {released:true,peerAcknowledged:true};}}));
- return {sdk,sent,gap(){queues[1].push({type:'resync_required',reason:'events_expired'});},offline(){online=false;},online(){online=true;}};
+// Events carry cursors and poll returns everything after the caller's cursor, like the host
+// bridge (demo/core/peer-session/manager.js): a caller that does not advance its cursor sees the
+// same events again.
+function pair(){const queues=[[],[]],assets=[new Map(),new Map()],sent=[[],[]],cursors=[0,0];let online=true,closed=false;const push=(i,e)=>queues[i].push({...e,cursor:++cursors[i]});
+ const sdk=[0,1].map(i=>({getContext:async()=>({role:i?'guest':'host',protocol:{id:'pet-hide-duel',version:2},invitationId:'fixture',peer:{displayName:'朋友'}}),join:async()=>({status:'connected',epoch:1}),send:async m=>{if(!online)throw Error('peer_offline');sent[i].push(structuredClone(m));push(1-i,{type:'message',message:structuredClone(m)});return {status:m.lane==='latest'?'queued':'peer_received',seq:1};},poll:async({cursor=0}={})=>{await new Promise(r=>setTimeout(r,15));while(queues[i].length&&queues[i][0].cursor<=cursor-200)queues[i].shift();const events=queues[i].filter(e=>e.cursor>cursor).slice(0,200);return {events,cursor:events.length?events.at(-1).cursor:cursor,transportState:closed?'closed':online?'connected':'reconnecting',epoch:1};},transfer:async a=>{const id='asset-'+i;assets[1-i].set(id,{...a,transferId:id});push(1-i,{type:'transfer',transferId:id,purpose:a.purpose});return {transferId:id};},readTransfer:async({transferId})=>assets[i].get(transferId),leave:async()=>{closed=true;return {released:true,peerAcknowledged:true};}}));
+ return {sdk,sent,gap(){push(1,{type:'resync_required',reason:'events_expired'});},offline(){online=false;},online(){online=true;}};
 }
 async function wait(f,ms=4000){const until=Date.now()+ms;while(!f()){if(Date.now()>until)throw Error('wait_timeout');await new Promise(r=>setTimeout(r,20));}}
 test('direction vectors normalize diagonals and referee limits preparation movement too',()=>{
@@ -61,5 +64,32 @@ test('session referee completes knockout/rematch; replayed command ID cannot dam
  assert(states.every(s=>s.phase==='ended'&&s.winner===0));await a[0].action('ready');await a[1].action('ready');await step(400);await wait(()=>states.every(s=>s.generation===2));assert(states.every(s=>s.self.hp===100));
  await p.sdk[1].send(guestRequest);await step(400);assert(states.every(s=>s.self.hp===100));assert.equal(states[0].ammo,3);
  const old={...guestRequest,payload:{...guestRequest.payload,id:'late-old-generation'}};await p.sdk[1].send(old);await step(400);assert.equal(p.sent[0].filter(m=>m.type==='duel.reply').at(-1).payload.reply.error,'stale_match');assert.equal(states[0].ammo,3);
+ }finally{for(const v of a)v.dispose();}
+});
+
+// Health check 2026-09-29 (vibe_contents/net-checkup, hide reliable-exhaust): the host's reply
+// table stopped at 512 entries and threw command_limit; the poll loop had no per-event guard, so
+// that throw kept the cursor where it was and the same events were replayed forever — both
+// sides stuck on "reconnecting", the match paused.
+test('an event that throws never stalls polling: later events are still handled',async()=>{
+ const p=pair(),states=[null,null],status=[null,null],errors=[[],[]];const a=p.sdk.map((sdk,i)=>create(sdk,{onState:s=>states[i]=s,onConnection:s=>status[i]=s,onError:e=>errors[i].push(e.message)}));
+ try{await Promise.all(a.map((v,i)=>v.start({name:i?'乙':'甲',pet:pet()})));await wait(()=>states.every(s=>s?.opponent));
+  await p.sdk[0].send({lane:'latest',key:'view0',type:'duel.view',payload:{serial:1e9,index:0,total:1,data:'!'}}); // malformed: the guest throws on it
+  await a[0].action('ready');
+  await wait(()=>states[1].opponent.ready===true,6000);
+  assert(errors[1].some(m=>/invalid_snapshot|Invalid|base64|JSON/i.test(m))||errors[1].length>0,'the bad view was reported');
+  await new Promise(r=>setTimeout(r,400));assert.equal(status[1],'connected','the guest stays connected');
+ }finally{for(const v of a)v.dispose();}
+});
+test('more than 512 guest requests in one match never lock the referee',{timeout:120000},async()=>{
+ const p=pair(),states=[null,null],status=[null,null],errors=[[],[]];const a=p.sdk.map((sdk,i)=>create(sdk,{onState:s=>states[i]=s,onConnection:s=>status[i]=s,onError:e=>errors[i].push(e.message)}));
+ try{await Promise.all(a.map((v,i)=>v.start({name:i?'乙':'甲',pet:pet()})));await wait(()=>states.every(s=>s?.opponent));
+  await a[0].action('ready');await a[1].action('ready');await wait(()=>states.every(s=>s?.generation===1));
+  let answered=0,failed=[];
+  for(let n=0;n<560;n++){try{await a[1].action('command',{type:'pose',generation:1,turn:states[1].turn,index:0});answered++;}catch(e){failed.push(e.message);}}
+  assert.equal(failed.filter(m=>/command_timeout|command_limit|session_closed/.test(m)).length,0,'no lock-up: '+[...new Set(failed)].join(','));
+  assert.equal(answered+failed.length,560);
+  assert.deepEqual(errors[0].filter(m=>/command_limit/.test(m)),[],'the host never refuses with command_limit');
+  assert.equal(status[0],'connected');assert.equal(status[1],'connected');
  }finally{for(const v of a)v.dispose();}
 });

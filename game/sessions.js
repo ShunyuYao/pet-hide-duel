@@ -60,7 +60,9 @@
       if(!match||!req||typeof req.id!=='string'||req.id.length>100||!['ready','command'].includes(req.kind))throw Error('invalid_command');
       const old=results.get(req.id),hash=JSON.stringify(req);
       if(old){if(old.hash!==hash)throw Error('command_conflict');return old.reply;}
-      if(results.size>=512)throw Error('command_limit');
+      // Keep the last 512 replies (retries of a request come within seconds); never refuse new
+      // requests (health check 2026-09-29: refusing at 512 locked the session).
+      while(results.size>=512)results.delete(results.keys().next().value);
       let reply;
       try{if(req.generation!==match.generation)throw Error('stale_match');match.tick();match.touch(1);if(req.kind==='ready'){match.ready(1);reply={ok:true};}else reply=match.command(1,req.payload);}catch(error){reply={error:error.message};}
       results.set(req.id,{hash,reply});return reply;
@@ -105,7 +107,9 @@
           status(batch.transportState);
           if(connection==='closed'){setClosed('session_closed');break;}
           if(connection==='connected'&&changed){void initialize();nextView=0;if(context.role==='guest')await send('duel.sync',{},'latest','sync');}
-          for(const e of batch.events)await event(e);cursor=batch.cursor;
+          // Each event on its own: one that throws is reported and skipped, and the cursor still moves
+          // on (a throw here used to replay the same events forever).
+          for(const e of batch.events){try{await event(e);}catch(error){fail(error);}}cursor=batch.cursor;
         }catch(error){if(['session_closed','caller_disposed','permission_denied','permission_revoked','account_changed'].some(c=>String(error.message).includes(c))){setClosed(error.message);break;}status('reconnecting');fail(error);await sleep(350);}
         await sleep(40);
       }

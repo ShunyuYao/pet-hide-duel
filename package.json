@@ -30,7 +30,7 @@
     "build:check": "node build-game.cjs --check",
     "test:public": "npm test && npm run build:check"
   },
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A two-player LAN hide-and-seek duel with 2D pets and frontal 3D doll poses.",
   "license": "UNLICENSED",
   "engines": {
