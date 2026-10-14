@@ -4397,7 +4397,8 @@ return {Match};
       if(connection!=='connected'||sending||now()<nextView)return;
       sending=true;
       try{const remote=match.snapshot(1);const parts=await encodeView(remote,++serial);if(disposed||connection!=='connected')return;
-        const bytes=parts.reduce((n,p)=>n+JSON.stringify(p).length+150,0);nextView=now()+Math.max(250,Math.ceil(bytes/220000*1000));
+        // Small views follow the 100ms producer; large masked images retain the byte budget.
+        const bytes=parts.reduce((n,p)=>n+JSON.stringify(p).length+150,0);nextView=now()+Math.max(75,Math.ceil(bytes/220000*1000));
         for(const part of parts)await send('duel.view',part,'latest','view'+part.index);
       }catch(error){if(error.message!=='invalid_player')fail(error);}finally{sending=false;}
     }
@@ -4445,8 +4446,10 @@ return {Match};
       if(assembly.parts.filter(Boolean).length===assembly.total){const complete=assembly;assembly=null;const next=await decodeView(complete.parts,pet);if(complete.serial>applied){applied=complete.serial;state(next);}}
     }
     async function poll(){
+      let lastPoll=-Infinity;
       while(!disposed&&connection!=='closed'){
-        try{const batch=await sdk.poll({cursor,waitMs:1000});if(disposed)break;
+        try{const wait=lastPoll+40-now();if(wait>0)await sleep(wait);if(disposed)break;lastPoll=now();
+          const batch=await sdk.poll({cursor,waitMs:1000});if(disposed)break;
           const changed=epoch!==batch.epoch||connection!==batch.transportState;
           if(epoch!==batch.epoch){epoch=batch.epoch;assembly=null;}
           status(batch.transportState);
@@ -4456,7 +4459,6 @@ return {Match};
           // on (a throw here used to replay the same events forever).
           for(const e of batch.events){try{await event(e);}catch(error){fail(error);}}cursor=batch.cursor;
         }catch(error){if(['session_closed','caller_disposed','permission_denied','permission_revoked','account_changed'].some(c=>String(error.message).includes(c))){setClosed(error.message);break;}status('reconnecting');fail(error);await sleep(350);}
-        await sleep(40);
       }
     }
     async function start(input){

@@ -24,3 +24,17 @@ English: This audit does not modify the game or adopt Pet Kit. Real hidden-host 
 ## 发现与防止复发
 
 Agent在收益评估阶段发现正常快照节奏与批次收包的不同缺口。以前只记录自身正常流畅，不能外推弱网通过；本次把批次路径注册到具名聚合门槛，失败保留。初步审计继续采样时末尾沿用了旧PASS文案，虽然最终ok为false且退出码1仍容易误读；测试已改为明确标注smoothness assertions FAILED，历史报告保持原样，以顶层failures/ok为准。
+
+## 第二阶段：已授权的最小节奏修复
+
+2026-10-14：候选一仅将小快照最小间隔250ms改为75ms（100ms生产定时器），180ms批次测试自身移动83.3%且停止偏差13px，未通过；候选二同时消除收包完成后的额外40ms等待，同路径通过。实现保留40ms最小收包启动间隔防空转，保留220000字节/秒预算与最大6片；不改500ms本地预测上限，也不传/预测完整对手位置。范围：game/sessions.js、tests/sessions.test.cjs、版本及单文件构建。需以最终源码重建产物复验正常/批次/3D与公开规则套件后才交付。
+
+最终2.0.3 HTML SHA-256：`4de6ef8d13570dbc317d1ad4daf27853be1bbc85173d109aa548210327b558ed`。`test:public` 78项通过，含真实publisher的刷新/带宽/遮挡断言，以及现有规则、网络、命中/重赛、560次命令、角色互换与运动边界；构建一致性通过。
+
+- `test:motion:audit` 普通网络：`2026-10-14T15-11-10-499Z`，自身移动100%有效帧变化，停止误差0，客人看到的遮挡快照约10.10Hz。
+- 同入口180ms批次：`2026-10-14T15-11-57-755Z`，客人自身移动89.2%（旧版70.7%），停止误差0，客人遮挡快照约10Hz。仍可能有弱网停顿，不能称所有延迟消失。
+- 新具名入口 `test:motion:audit:doll`（已纳入delivery）：`2026-10-14T15-16-08-967Z`，真实安装当前3D形象与2D双人、180ms批次，连续性/松键/角色互换/遮挡/退出均通过。后台截图检查与自有进程退出通过。
+
+仅改变发送/收包节奏，无新增房间协议、公共Kit依赖或隐藏位置暴露。原失败报告保留。未运行物理双机、公网、原生焦点及与本改动无关的完整编辑器回归；不以同机延迟注入代替公网证明。
+
+English: Version 2.0.3 ships the bounded cadence fix, without a Room/Motion migration or a larger prediction allowance. Small snapshots now follow the 100ms producer; polling enforces a minimum start interval instead of adding delay after every completed long poll. Byte/part limits and hidden-opponent masking are unchanged. All 78 public checks and actual hidden-host normal, 180ms-batched and 3D-batched motion paths pass. Guest local continuity improves from 70.7% to 89.2% in the 2D batch case, with zero final position error; this does not eliminate all weak-network stalls. Physical WAN is not covered.

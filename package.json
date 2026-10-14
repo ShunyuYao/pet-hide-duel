@@ -9,7 +9,7 @@
     "test:match": "node --test tests/match.test.cjs",
     "test:network": "node --test tests/network.test.cjs",
     "test:host-foundation-e2e": "node tests/host-foundation-e2e.cjs",
-    "test:delivery": "npm run test:public && npm run test:host-foundation-e2e && npm run test:current-pets-e2e && npm run test:doll-render-e2e && npm run test:game-e2e && npm run test:sdk-flow-e2e && npm run test:e2e:smoothness && npm run test:e2e:smoothness:doll && npm run test:motion:audit",
+    "test:delivery": "npm run test:public && npm run test:host-foundation-e2e && npm run test:current-pets-e2e && npm run test:doll-render-e2e && npm run test:game-e2e && npm run test:sdk-flow-e2e && npm run test:e2e:smoothness && npm run test:e2e:smoothness:doll && npm run test:motion:audit && npm run test:motion:audit:doll",
     "build": "node build-game.cjs",
     "start": "node launch-server.cjs",
     "test:service": "node --test tests/service.test.cjs",
@@ -29,9 +29,10 @@
     "test:e2e:smoothness:doll": "node tests/smoothness-e2e.cjs --doll",
     "build:check": "node build-game.cjs --check",
     "test:public": "npm test && npm run build:check",
-    "test:motion:audit": "node tests/motion-audit.cjs && node tests/motion-audit.cjs --batched"
+    "test:motion:audit": "node tests/motion-audit.cjs && node tests/motion-audit.cjs --batched",
+    "test:motion:audit:doll": "node tests/motion-audit.cjs --batched --doll"
   },
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A two-player LAN hide-and-seek duel with 2D pets and frontal 3D doll poses.",
   "license": "UNLICENSED",
   "engines": {

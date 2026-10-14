@@ -93,3 +93,17 @@ test('more than 512 guest requests in one match never lock the referee',{timeout
   assert.equal(status[0],'connected');assert.equal(status[1],'connected');
  }finally{for(const v of a)v.dispose();}
 });
+
+// Exercise the real publisher and consumer, rather than asserting a timing constant.
+test('small views refresh at movement cadence without exceeding the send quota',async()=>{
+ const p=pair(),states=[null,null],a=p.sdk.map((sdk,i)=>create(sdk,{onState:s=>states[i]=s}));
+ try{await Promise.all(a.map((v,i)=>v.start({name:i?'乙':'甲',pet:pet()})));await wait(()=>states.every(s=>s?.opponent));
+  await a[0].action('ready');await a[1].action('ready');await wait(()=>states.every(s=>s.generation===1));
+  p.sent[0].length=0;await new Promise(r=>setTimeout(r,1200));
+  const views=p.sent[0].filter(m=>m.type==='duel.view'),serials=new Set(views.map(m=>m.payload.serial));
+  assert(serials.size>=8,'small views must not be held at 3Hz: '+serials.size);
+  assert(views.length<=24,'reserve send quota for reliable commands');
+  assert(views.reduce((n,m)=>n+JSON.stringify(m).length,0)<220000*1.2,'bounded bandwidth');
+  assert.equal(states[1].opponent.pose,undefined,'faster views still hide opponent pose');
+ }finally{a.forEach(v=>v.dispose());}
+});
